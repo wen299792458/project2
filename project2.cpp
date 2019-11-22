@@ -22,7 +22,8 @@ class Map{
     int rows, cols, chargerow, chargecol;
     int *rowstack, *colstack;
     int battery;
-    int end;
+    int stepcount;
+    int is_count;
     public:
     Map(int rows, int cols, int battery):rows(rows),cols(cols),battery(battery){
         Matrix = new int*[rows];
@@ -33,22 +34,47 @@ class Map{
         }
         rowstack = new int[(battery/2)+1];
         colstack = new int[(battery/2)+1];
+        stepcount = 0;
+        is_count = 1;
     };
     ~Map(){};
     void ReadMap(ifstream&);
+    void Label();
+    void Choose_route();
+    void Clean(ofstream&);
+    bool End();
+    
+    void finishcount();
+    int Getcount();
+    void Showinitial(ofstream&);
     void ShowMap();
     void ShowMap2();
-    void Label();
-    bool End();
-    void Choose_route();
-    void Clean();
     void FinalShowMap();
 };
 
-void Map::Clean(){
+void Map::finishcount(){
+    is_count = 0;
+    for (int i = 0; i < rows; i++){
+        for (int j = 0; j < cols; j++){
+        if(Matrix[i][j] >= 2) cleaned[i][j] = 0;
+        else cleaned[i][j] = 1;
+        }
+    }
+}
+
+int Map::Getcount(){
+    return stepcount;
+}
+
+void Map::Showinitial(ofstream& output){
+    output << chargerow << " " << chargecol << endl;
+}
+
+void Map::Clean(ofstream& output){
     int cur_row, cur_col, batt_left = 0;
     for(int i = 0; rowstack[i] != -1; i++){
-        cout << rowstack[i] << " " << colstack[i] << endl;
+        if(is_count) stepcount++;
+        else output << rowstack[i] << " " << colstack[i] << endl;
         cur_row = rowstack[i];
         cur_col = colstack[i];
         cleaned[cur_row][cur_col] = 1;
@@ -69,9 +95,10 @@ void Map::Clean(){
             }
         }
         cleaned[cur_row][cur_col] = 1;
-        cout << cur_row << " " << cur_col << endl;
+        if(is_count) stepcount++;
+        else output << cur_row << " " << cur_col << endl;
     }
-    cout << "back" << batt_left << endl;
+//    cout << "back " << batt_left << endl;
     while(Matrix[cur_row][cur_col] != 2){
         if(cleaned[cur_row+1][cur_col] == 0 && Matrix[cur_row+1][cur_col] < Matrix[cur_row][cur_col]){cur_row++;}
         else if(cleaned[cur_row][cur_col+1] == 0 && Matrix[cur_row][cur_col+1] < Matrix[cur_row][cur_col]){cur_col++;}
@@ -88,10 +115,12 @@ void Map::Clean(){
             else if(Matrix[cur_row][cur_col-1] != 1 && Matrix[cur_row][cur_col-1] < Matrix[cur_row][cur_col]){cur_col--;}
         }
         cleaned[cur_row][cur_col] = 1;
-        cout << cur_row << " " << cur_col << endl;
+        if(is_count) stepcount++;
+        else output << cur_row << " " << cur_col << endl;
     }
-        cout << chargerow << " " << chargecol << endl;
-        ShowMap();
+    if(is_count) stepcount++;
+    else output << chargerow << " " << chargecol << endl;
+//    ShowMap();
 }
 void Map::Choose_route(){
     int min_i, min_j, min_value = battery;
@@ -167,7 +196,8 @@ void Map::ShowMap(){
             cout << cleaned[i][j];
         }
         cout << endl;
-    }    
+    }
+    cout << endl;
 }
 void Map::ShowMap2(){
     for (int i = 0; i < rows; i++){
@@ -209,21 +239,30 @@ bool Map::End(){
 }
 
 int main(){
-    ifstream input("floor2.data", ios::in);
+    ifstream input("floor.data1", ios::in);
+    ofstream output("final.path", ios::in);
     int rows, cols, batt;
     input >> rows >> cols >> batt;
     Map map(rows, cols, batt);
     map.ReadMap(input);
-    cout << rows << " " << cols << " " << batt << endl;
-    map.ShowMap();
+//    cout << rows << " " << cols << " " << batt << endl;
+ //   map.ShowMap();
     cout << endl << "labeled: "<< endl;
     map.Label();
     map.ShowMap2();
     cout << endl << "result" << endl;
     while(map.End()){
        map.Choose_route();
-       map.Clean();
+       map.Clean(output);
     }
-    map.ShowMap();
+    output << map.Getcount() << endl;
+    map.finishcount();
+//    map.ShowMap();
+    map.Showinitial(output);
+    while(map.End()){
+       map.Choose_route();
+       map.Clean(output);
+    }
+//    map.ShowMap();
     cout << "FINSH ALL THE WORK!!!!!!!!!!!!!" << endl;
 }
